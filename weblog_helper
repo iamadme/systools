@@ -1,0 +1,45 @@
+#!/usr/bin/python3
+
+import ipaddress
+import argparse
+import os.path
+
+def validate_ip(ip_value):
+    if '/' not in ip_value:
+        try:
+            ip_addr = ipaddress.ip_address(ip_value)
+        except ValueError:
+            raise argparse.ArgumentTypeError("%s isn't a valid IP address" % ip_value)
+        return ip_value
+    else:
+        try:
+            ip_addr = ipaddress.ip_network(ip_value)
+        except ValueError:
+            raise argparse.ArgumentTypeError("%s contains a '/' but is not a valid IP address **Hint, cidr blocks must make sense**" % ip_value)
+        return ip_value
+
+def validate_file(file_name):
+    if os.path.isfile(file_name):
+        return file_name
+    else:
+        raise argparse.ArgumentTypeError("%s does not exist, we can't search a non existent file" % file_name)
+
+
+
+parser = argparse.ArgumentParser(description="Command line tool to search IP ranges within a file")
+parser.add_argument('-i', '--ip', help='Pass in IP range to search, use cidr block notation', type=validate_ip, required=True)
+parser.add_argument('-f', '--file', help='Relative path of file to search', type=validate_file, required=False, default='public_access.log.txt')
+args = parser.parse_args()
+
+if '/' in args.ip:
+    ip_range = ipaddress.ip_network(args.ip)
+    search_file = open(args.file, 'r')
+#    print(list(ip_range.hosts()))
+    for line in search_file:
+       for ip in list(ip_range.hosts()):
+          if str(ip) in line: print(line)
+else:
+    ip = ipaddress.ip_address(args.ip)
+    search_file = open(args.file, 'r')
+    for line in search_file:
+      if str(ip) in line: print(line)
